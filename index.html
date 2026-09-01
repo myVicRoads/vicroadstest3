@@ -1,0 +1,1100 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#FFFFFF" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="myVicRoads" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>myVicRoads</title>
+  <script>
+    /* iOS Safari / installed PWA both cache the top-strip tint from the first
+       render and only re-sample it when a "screen swap" occurs (e.g. opening
+       the licence view, which display:none-s #home-screen and shows another).
+       Replicate that show/hide toggle silently on load so the strip picks up
+       #EEF1F3 immediately instead of after the user's first navigation.
+
+       We combine three nudges because different iOS versions honour different
+       triggers: (1) toggle theme-color meta, (2) programmatic scroll, and
+       (3) briefly hide #home-screen to force the same repaint the licence
+       screen swap causes. */
+    (function () {
+      function kickChrome() {
+        // 1. Nudge theme-color
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          var val = meta.getAttribute('content');
+          meta.setAttribute('content', '#FFFFFE');
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { meta.setAttribute('content', val); });
+          });
+        }
+        // 2. Micro-scroll — iOS resamples chrome tint on scroll events
+        try { window.scrollTo(0, 1); window.scrollTo(0, 0); } catch (_) {}
+        // 3. Hide/show #home-screen to mimic the licence-view screen swap
+        var home = document.getElementById('home-screen');
+        if (home && !home.classList.contains('hidden')) {
+          var prev = home.style.display;
+          home.style.display = 'none';
+          // Force reflow so the display:none actually takes effect before restore
+          void home.offsetHeight;
+          home.style.display = prev || '';
+        }
+      }
+      function schedule() {
+        // Run once immediately after the splash fade would have completed
+        // (~500ms) so #home-screen is definitely visible when we kick it.
+        setTimeout(kickChrome, 600);
+        // And once more after another second in case iOS ignored the first
+        // (some iOS 17 builds need a second nudge post-first-paint).
+        setTimeout(kickChrome, 1600);
+      }
+      if (document.readyState === 'complete') schedule();
+      else window.addEventListener('load', schedule);
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ============================== SPLASH SCREEN ============================== -->
+  <section id="splash-screen">
+    <div class="splash-logo-wrap">
+      <img class="splash-logo" src="logos/myvicroads-wordmark-380.svg" alt="myVicRoads" />
+    </div>
+    <div class="splash-spinner-wrap">
+      <div class="splash-spinner" aria-hidden="true"></div>
+    </div>
+  </section>
+
+
+<!-- ============================== STANDALONE PROTOTYPE LICENSE GATE ============================== -->
+
+<section id="prototype-license-gate" class="screen">
+
+  <div class="prototype-lg-wrap">
+
+    <!-- Logo -->
+    <div class="prototype-lg-logo-wrap">
+      <img
+        class="prototype-lg-logo"
+        src="logos/myvicroads-wordmark-380.svg"
+        alt="myVicRoads"
+      />
+    </div>
+
+
+    <!-- Title -->
+    <h1 class="prototype-lg-title">
+      Activate myVicRoads
+    </h1>
+
+
+    <!-- Description -->
+    <p class="prototype-lg-sub">
+      Enter your activation code to begin.
+    </p>
+
+
+    <!-- ============================== ACTIVATION CODE ============================== -->
+
+    <div class="prototype-lg-step">
+
+      <!-- Code label -->
+      <label
+        class="prototype-lg-key-label"
+        for="prototype-activation-code">
+
+        Activation code
+
+      </label>
+
+
+      <!-- Code input -->
+      <input
+        id="prototype-activation-code"
+        class="prototype-lg-key-input"
+        type="text"
+        inputmode="latin"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        maxlength="24"
+        placeholder="XXXX-XXXX-XXXX-XXXX"
+        aria-label="Activation code"
+      />
+
+
+      <!-- Activate button -->
+      <button
+        type="button"
+        id="prototype-activate-button"
+        class="prototype-lg-activate-button">
+
+        Activate
+
+      </button>
+
+    </div>
+
+
+    <!-- ============================== STATUS ============================== -->
+
+    <div
+      id="prototype-lg-status"
+      class="prototype-lg-status"
+      role="status"
+      aria-live="polite">
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ============================== PROTOTYPE PIN SCREEN ============================== -->
+<section id="pin-screen" class="screen">
+
+  <div class="pin-wrap">
+
+    <div class="pin-lock" aria-hidden="true">
+      <img
+        class="pin-lock-img"
+        src="logos/pin_view.svg"
+        alt=""
+        width="96"
+        height="96"
+      />
+    </div>
+
+    <h1 class="pin-title" id="pin-title">
+      Please enter your PIN code
+    </h1>
+
+    <div class="pin-dots" id="pin-dots">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+
+    <div
+      class="pin-error"
+      id="pin-error"
+      role="alert"
+      aria-live="polite">
+    </div>
+
+    <div class="keypad" id="keypad">
+
+      <button type="button" class="key" data-key="1">1</button>
+      <button type="button" class="key" data-key="2">2</button>
+      <button type="button" class="key" data-key="3">3</button>
+
+      <button type="button" class="key" data-key="4">4</button>
+      <button type="button" class="key" data-key="5">5</button>
+      <button type="button" class="key" data-key="6">6</button>
+
+      <button type="button" class="key" data-key="7">7</button>
+      <button type="button" class="key" data-key="8">8</button>
+      <button type="button" class="key" data-key="9">9</button>
+
+      <button
+        type="button"
+        class="key key-forgot"
+        data-key="forgot">
+        Forgot?
+      </button>
+
+      <button type="button" class="key" data-key="0">0</button>
+
+      <button
+        type="button"
+        class="key key-back"
+        data-key="back"
+        aria-label="Backspace">
+
+        <svg
+          viewBox="0 0 32 24"
+          width="24"
+          height="18"
+          fill="none"
+          stroke="#1F2C3D"
+          stroke-width="2"
+          stroke-linejoin="round"
+          stroke-linecap="round">
+
+          <path d="M9 2 L2 12 L9 22 L29 22 a2 2 0 0 0 2 -2 V4 a2 2 0 0 0 -2 -2 Z"/>
+
+          <path d="M14 8 L24 16 M24 8 L14 16"/>
+
+        </svg>
+
+      </button>
+
+    </div>
+
+  </div>
+
+</section>
+
+  <!-- ============================== HOME SCREEN ============================== -->
+  <section id="home-screen" class="screen hidden">
+    <!-- ============ HOME tab ============ -->
+    <main class="tab-panel" id="panel-home">
+      <div class="hi-greeting-wrap">
+        <h1 class="hi-greeting" id="hi-greeting">Hi <span id="hi-name">User</span></h1>
+      </div>
+      <div class="tab-scroll home-scroll">
+        <div class="card home-card" id="home-demerit-card" role="button" tabindex="0" data-fake-page="demerit">
+          <div class="demerit-icon" aria-hidden="true">
+            <img src="logos/demerit-120.svg" alt="" width="44" height="44" />
+          </div>
+          <div class="card-title">Demerit points balance</div>
+        </div>
+
+        <div class="card home-card" id="home-vehicles-card" role="button" tabindex="0" data-fake-page="vehicle-list">
+          <div class="vehicles-icon" aria-hidden="true">
+            <img src="logos/registered-120.svg" alt="" width="44" height="44" />
+          </div>
+          <div class="card-title">Registered vehicles</div>
+        </div>
+      </div>
+
+      <div class="my-licence-card" id="my-licence-card" role="button" tabindex="0">
+        <div class="my-licence-text">
+          <div class="my-licence-title">My licence</div>
+          <div class="my-licence-sub">Tap to view licence</div>
+        </div>
+        <svg class="expand-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </div>
+    </main>
+
+    <!-- ============ VEHICLES tab ============ -->
+    <main class="tab-panel hidden" id="panel-vehicles">
+      <h1 class="tab-title">Vehicles</h1>
+      <div class="tab-scroll">
+        <div class="menu-card">
+          <div class="menu-row" id="vehicles-my-registered" role="button" tabindex="0" data-fake-page="vehicle-list">
+            <div class="menu-row-content">
+              <div class="menu-row-title">My registered vehicles</div>
+              <div class="menu-row-sub">View all registered vehicles</div>
+            </div>
+          </div>
+        </div>
+        <div class="menu-card">
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="rego-renewal">
+            <div class="menu-row-content">
+              <div class="menu-row-title">Manage registration renewal</div>
+              <div class="menu-row-sub">Renew your registration when it's due</div>
+            </div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="garage-address">
+            <div class="menu-row-content"><div class="menu-row-title">Change your garage address</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="apprentice-discount">
+            <div class="menu-row-content"><div class="menu-row-title">Apprentice registration discount</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="uvp">
+            <div class="menu-row-content"><div class="menu-row-title">Unregistered vehicle permits</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="vehicle-reports">
+            <div class="menu-row-content"><div class="menu-row-title">My vehicle reports</div></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============ LICENCE tab ============ -->
+    <main class="tab-panel hidden" id="panel-licence">
+      <h1 class="tab-title">Licence</h1>
+      <div class="tab-scroll">
+        <div class="licence-card-inline" id="licence-card-inline" role="button" tabindex="0">
+          <div class="my-licence-text">
+            <div class="my-licence-title">My licence</div>
+            <div class="my-licence-sub">Tap to view licence</div>
+          </div>
+          <svg class="expand-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </div>
+        <div class="menu-card">
+          <div class="menu-row" id="licence-view-demerit" role="button" tabindex="0" data-fake-page="demerit">
+            <div class="menu-row-content"><div class="menu-row-title">View demerit points</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="licence-renewal">
+            <div class="menu-row-content">
+              <div class="menu-row-title">Manage licence renewal</div>
+              <div class="menu-row-sub">Renew your licence when it's due</div>
+            </div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="driver-history">
+            <div class="menu-row-content"><div class="menu-row-title">Order driver history report</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="update-address">
+            <div class="menu-row-content"><div class="menu-row-title">Update address on licence</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="mylearners">
+            <div class="menu-row-content"><div class="menu-row-title">Access myLearners</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="replace-licence">
+            <div class="menu-row-content"><div class="menu-row-title">Replace licence</div></div>
+          </div>
+        </div>
+        <div class="menu-card">
+          <div class="menu-row menu-row-verify" role="button" tabindex="0">
+            <div class="menu-row-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1F2C3D" stroke-width="1.6">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="5.5" y="5.5" width="2" height="2" fill="#1F2C3D" stroke="none"/>
+                <rect x="16.5" y="5.5" width="2" height="2" fill="#1F2C3D" stroke="none"/>
+                <rect x="5.5" y="16.5" width="2" height="2" fill="#1F2C3D" stroke="none"/>
+                <rect x="14" y="14" width="3" height="3" fill="#1F2C3D" stroke="none"/>
+                <rect x="19" y="14" width="2" height="2" fill="#1F2C3D" stroke="none"/>
+                <rect x="14" y="19" width="2" height="2" fill="#1F2C3D" stroke="none"/>
+                <rect x="19" y="19" width="2" height="2" fill="#1F2C3D" stroke="none"/>
+              </svg>
+            </div>
+            <div class="menu-row-content"><div class="menu-row-title">Verify someone&rsquo;s licence</div></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============ PAYMENTS tab ============ -->
+    <main class="tab-panel hidden" id="panel-payments">
+      <h1 class="tab-title">Payments</h1>
+      <div class="tab-scroll">
+        <div class="menu-card">
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="payment-methods">
+            <div class="menu-row-content">
+              <div class="menu-row-title">Manage payment methods</div>
+              <div class="menu-row-sub">Store your credit card and bank account details to make payments</div>
+            </div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="direct-debit">
+            <div class="menu-row-content">
+              <div class="menu-row-title">Direct debit payments</div>
+              <div class="menu-row-sub">Manage direct debit settings</div>
+            </div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="transaction-history">
+            <div class="menu-row-content">
+              <div class="menu-row-title">Transaction history</div>
+              <div class="menu-row-sub">View recent transactions made using your myVicRoads account</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============ PROFILE tab ============ -->
+    <main class="tab-panel hidden" id="panel-profile">
+      <h1 class="tab-title">Profile</h1>
+      <div class="tab-scroll">
+        <div class="menu-card">
+          <div class="menu-section-title">Profile and settings</div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="personal-info">
+            <div class="menu-row-content"><div class="menu-row-title">Personal information</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="addresses">
+            <div class="menu-row-content"><div class="menu-row-title">Addresses</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-fake-page="security-settings">
+            <div class="menu-row-content"><div class="menu-row-title">Security settings</div></div>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-profile-row="passkey">
+            <div class="menu-row-content"><div class="menu-row-title">Passkey settings</div></div>
+            <svg class="menu-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 6 15 12 9 18"/>
+            </svg>
+          </div>
+        </div>
+        <div class="menu-card">
+          <div class="menu-section-title">App controls</div>
+          <div class="menu-row" role="button" tabindex="0" data-profile-row="biometrics">
+            <div class="menu-row-content">
+              <div class="menu-row-title">Biometrics and settings</div>
+              <div class="menu-row-sub">Enable biometrics and deactivate card or account</div>
+            </div>
+            <svg class="menu-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 6 15 12 9 18"/>
+            </svg>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-profile-row="help">
+            <div class="menu-row-content"><div class="menu-row-title">Help and info</div></div>
+            <svg class="menu-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 6 15 12 9 18"/>
+            </svg>
+          </div>
+          <div class="menu-row" role="button" tabindex="0" data-external-url="https://survey.usabilla.com/live/s/648ab25b382831762f380f92?reset">
+            <div class="menu-row-content"><div class="menu-row-title">Provide app feedback</div></div>
+            <svg class="menu-row-chevron menu-row-external" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1F2C3D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 15L15 9"/>
+              <polyline points="10 9 15 9 15 14"/>
+            </svg>
+          </div>
+        </div>
+        <div class="menu-card">
+          <div class="menu-row logout-row" role="button" tabindex="0">
+            <div class="menu-row-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1F2C3D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </div>
+            <div class="menu-row-content"><div class="menu-row-title">Log out</div></div>
+          </div>
+        </div>
+        <div class="app-version">App version 1.3.5</div>
+      </div>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-tab active" data-tab="home">
+        <div class="nav-icon-wrap">
+          <img class="nav-icon-img home-v home-v-active" src="logos/vicroads-v-64.svg" alt="" width="30" height="24" />
+          <img class="nav-icon-img home-v home-v-inactive" src="logos/vicroads-v-dark-64.png" alt="" width="24" height="24" />
+        </div>
+        <span>Home</span>
+      </button>
+
+      <button class="nav-tab" data-tab="vehicles">
+        <div class="nav-icon-wrap">
+          <!-- Vehicles icon: two spans (NOT <img>) so the PNG is only used as a
+               mask, not rendered natively — otherwise the browser would draw
+               the native PNG on top of the masked version and you'd see an
+               overlap. Outline used when inactive, filled used when active.
+               Existing CSS toggles which one shows based on .nav-tab.active. -->
+          <span class="nav-vehicle-img icon-outline" aria-hidden="true"></span>
+          <span class="nav-vehicle-img icon-filled" aria-hidden="true"></span>
+        </div>
+        <span>Vehicles</span>
+      </button>
+
+      <button class="nav-tab" data-tab="licence">
+        <div class="nav-icon-wrap">
+          <span class="nav-licence-img icon-outline" aria-hidden="true"></span>
+          <span class="nav-licence-img icon-filled" aria-hidden="true"></span>
+        </div>
+        <span>Licence</span>
+      </button>
+
+      <button class="nav-tab" data-tab="payments">
+        <div class="nav-icon-wrap">
+          <span class="nav-payments-img icon-outline" aria-hidden="true"></span>
+          <span class="nav-payments-img icon-filled" aria-hidden="true"></span>
+        </div>
+        <span>Payments</span>
+      </button>
+
+      <button class="nav-tab" data-tab="profile">
+        <div class="nav-icon-wrap">
+          <span class="nav-profile-img icon-outline" aria-hidden="true"></span>
+          <span class="nav-profile-img icon-filled" aria-hidden="true"></span>
+        </div>
+        <span>Profile</span>
+      </button>
+    </nav>
+  </section>
+
+  <!-- ============================== LICENCE VIEW ============================== -->
+  <section id="license-screen" class="screen hidden">
+    <header class="lv-header">
+      <button class="lv-back" id="lv-back" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 4 7 12 15 20"/>
+        </svg>
+      </button>
+      <h2 class="lv-title">View details</h2>
+    </header>
+
+    <div class="pull-refresh-spinner" id="pull-refresh-spinner" aria-hidden="true">
+      <svg class="pull-refresh-ring" viewBox="0 0 36 36">
+        <defs>
+          <linearGradient id="pull-refresh-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#22B14C" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#22B14C" stop-opacity="0.12"/>
+          </linearGradient>
+        </defs>
+        <circle cx="18" cy="18" r="14" fill="none"
+                stroke="url(#pull-refresh-grad)"
+                stroke-width="3.5"
+                stroke-linecap="round"
+                stroke-dasharray="66 22"
+                transform="rotate(135 18 18)"/>
+      </svg>
+    </div>
+
+    <div class="lv-body">
+      <div class="last-refreshed">Last refreshed: <span id="last-refreshed">Tue 19 May 2026 8:26pm</span></div>
+
+      <div class="lv-red-banner">
+        <div class="banner-left">
+          <div class="banner-title">PROBATIONARY DRIVER LICENCE</div>
+          <div class="banner-sub">Victoria Australia</div>
+        </div>
+        <div class="vicroads-logo">
+          <img class="vicroads-banner-logo" src="logos/banner-logo-260.svg" alt="vicroads" />
+        </div>
+      </div>
+
+      <div class="lv-green-panel">
+        <div class="photo-row">
+          <div class="photo-frame">
+            <img id="user-photo" alt="Licence photo" />
+            <img class="coa-watermark" src="logos/coat-of-arms-watermark-200.png" alt="" aria-hidden="true" />
+          </div>
+          <div class="qr-frame">
+            <img class="qr-coa-bg" src="logos/coat-of-arms-background.png" alt="" aria-hidden="true" />
+            <div class="qr-consent-card">
+              <p class="qr-consent-text">Presenting a QR code allows your driver licence information to be scanned and shared.</p>
+              <p class="qr-consent-prompt">Do you consent to share your information?</p>
+              <button class="qr-reveal-btn" id="qr-reveal-btn">Reveal QR code</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs-pill">
+        <div class="tab-indicator no-anim" id="tab-indicator"></div>
+        <button class="tab-btn active" data-tab="licence">Licence</button>
+        <button class="tab-btn" data-tab="identity">Identity</button>
+        <button class="tab-btn" data-tab="age">Age</button>
+      </div>
+
+      <!-- Licence tab content -->
+      <div class="tab-content" id="tab-licence">
+        <h1 class="full-name" id="full-name">ALEX J SAMPLE</h1>
+        <hr class="divider" />
+
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-label">Licence number</div>
+            <div class="info-value" id="info-licence-number">012345678</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">Expiry</div>
+            <div class="info-value" id="info-expiry">01 Jan 2030</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">Licence type</div>
+            <div class="info-value">
+              <span id="info-type">Car</span>
+              <span class="p-badge" id="info-p-badge">P</span>
+            </div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">Date of birth</div>
+            <div class="info-value" id="info-dob">01 Jan 2000</div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="info-cell full">
+          <div class="info-label">Address</div>
+          <div class="info-value info-value-stack">
+            <div id="info-address">1 SAMPLE STREET</div>
+            <div id="info-suburb">MELBOURNE VIC 3000</div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="info-cell full">
+          <div class="info-label">Signature</div>
+          <div class="signature-box" id="signature-licence">
+            <img class="signature-img" id="signature-img-licence" alt="Signature" />
+            <div class="signature-placeholder">No signature uploaded</div>
+          </div>
+        </div>
+
+        <div class="section-header" id="section-vehicle-details">Car licence details</div>
+
+        <div class="detail-block">
+          <div class="info-label">Licence status</div>
+          <div class="status-row">
+            <span class="check-circle">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="5 12 10 17 19 7"/>
+              </svg>
+            </span>
+            <span class="status-text">Current</span>
+          </div>
+        </div>
+
+        <div class="detail-block">
+          <div class="info-label">Proficiency</div>
+          <div class="status-row">
+            <span class="p-badge big">P</span>
+            <span class="status-text" id="info-proficiency">P1</span>
+          </div>
+        </div>
+
+        <div class="detail-block">
+          <div class="info-label">Issue date</div>
+          <div class="info-value" id="info-issue">01 Jan 2026</div>
+        </div>
+
+        <div class="detail-block" id="p1-end-block">
+          <div class="info-label">P1 end date</div>
+          <div class="info-value" id="info-p1end">01 Jan 2027</div>
+        </div>
+
+        <div class="detail-block">
+          <div class="info-label">Expiry</div>
+          <div class="info-value" id="info-expiry-2">01 Jan 2030</div>
+        </div>
+
+        <div class="section-header">Other details</div>
+
+        <div class="detail-block">
+          <div class="info-label">Conditions</div>
+          <div class="condition-row">
+            <span class="condition-letter" id="cond-letter">A</span>
+            <span class="condition-text" id="cond-text">Automatic transmission - (car)</span>
+          </div>
+        </div>
+
+        <div class="detail-block">
+          <div class="info-label">Card number</div>
+          <div class="card-num-row">
+            <span class="card-num-mask" id="card-num-display">*******</span>
+            <button class="eye-toggle" id="eye-toggle" aria-label="Toggle card number">
+              <svg id="eye-svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1F2C3D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12 C5 6 9 4 12 4 s7 2 10 8 c-3 6 -7 8 -10 8 s-7 -2 -10 -8 Z"/>
+                <circle cx="12" cy="12" r="3"/>
+                <line class="eye-slash" x1="3" y1="3" x2="21" y2="21"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="detail-block barcode-block">
+          <div class="info-label">Victoria Police barcode</div>
+          <div class="barcode-row">
+            <svg id="vp-barcode" class="vp-barcode"></svg>
+            <button class="barcode-expand" id="barcode-expand" aria-label="Expand barcode">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1F2C3D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"/>
+                <polyline points="9 21 3 21 3 15"/>
+                <line x1="21" y1="3" x2="14" y2="10"/>
+                <line x1="3" y1="21" x2="10" y2="14"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="lv-bottom-spacer"></div>
+      </div>
+
+      <!-- Identity tab content -->
+      <div class="tab-content hidden" id="tab-identity">
+        <h1 class="full-name" id="id-full-name">ALEX J SAMPLE</h1>
+        <hr class="divider" />
+        <div class="info-cell full">
+          <div class="info-label">Address</div>
+          <div class="info-value info-value-stack">
+            <div id="id-address">1 SAMPLE STREET</div>
+            <div id="id-suburb">MELBOURNE VIC 3000</div>
+          </div>
+        </div>
+        <hr class="divider" />
+        <div class="info-cell full">
+          <div class="info-label">Signature</div>
+          <div class="signature-box" id="signature-identity">
+            <img class="signature-img" id="signature-img-identity" alt="Signature" />
+            <div class="signature-placeholder">No signature uploaded</div>
+          </div>
+        </div>
+        <div class="lv-bottom-spacer"></div>
+      </div>
+
+      <!-- Age tab content -->
+      <div class="tab-content hidden" id="tab-age">
+        <div class="detail-block age-status-block">
+          <div class="info-label">Age status</div>
+          <div class="status-row">
+            <span class="check-circle" id="age-check">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="5 12 10 17 19 7"/>
+              </svg>
+            </span>
+            <span class="status-text" id="age-status-text">Over 18</span>
+          </div>
+        </div>
+        <div class="lv-bottom-spacer"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== DEMERIT POINTS SUB-SCREEN ============================== -->
+  <section id="demerit-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="sub-back" id="demerit-back" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 4 7 12 15 20"/>
+        </svg>
+      </button>
+      <h2 class="sub-title">Demerit points</h2>
+    </header>
+    <div class="sub-body">
+      <div class="demerit-balance-card">
+        <div class="demerit-balance-label">Current Balance</div>
+        <div class="demerit-balance-row">
+          <span class="demerit-balance-number" id="demerit-balance-number">0</span><span class="demerit-balance-max"> / 12</span>
+        </div>
+        <div class="demerit-balance-unit">demerit points</div>
+      </div>
+      <div class="demerit-info-box">
+        <div class="demerit-info-title">Information</div>
+        <div class="demerit-info-text">Demerit points are recorded against your licence when you commit certain driving offences. If you accumulate too many points, your licence may be suspended.</div>
+      </div>
+      <div class="demerit-record-card">
+        <div class="demerit-record-title">Good driving record</div>
+        <div class="demerit-record-text">You currently have 0 demerit points. Keep up the safe driving!</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== MY VEHICLES SUB-SCREEN ============================== -->
+  <section id="vehicles-screen" class="screen sub-screen sub-screen-white hidden">
+    <header class="sub-header">
+      <button class="sub-back" id="vehicles-back" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 4 7 12 15 20"/>
+        </svg>
+      </button>
+      <h2 class="sub-title">My vehicles</h2>
+    </header>
+    <div class="sub-body">
+      <div class="empty-state">
+        <div class="empty-state-icon" aria-hidden="true">
+          <div class="empty-state-vehicle-img"></div>
+        </div>
+        <div class="empty-state-title">No registered vehicles</div>
+        <div class="empty-state-text">You don't have any registered vehicles yet. They will appear here once registered.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== LICENCE LOADING SCREEN ============================== -->
+  <section id="license-loading-screen" class="screen hidden">
+    <div class="license-loading-spinner" aria-hidden="true"></div>
+  </section>
+
+  <!-- ============================== HELP AND INFO SUB-SCREEN ============================== -->
+  <section id="help-info-screen" class="screen sub-screen sub-screen-grey hidden">
+    <header class="sub-header">
+      <button class="sub-back" id="help-info-back" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 4 7 12 15 20"/>
+        </svg>
+      </button>
+      <h2 class="sub-title">Help and info</h2>
+    </header>
+    <div class="sub-body">
+      <div class="sub-card">
+        <div class="sub-row" role="button" tabindex="0">
+          <div class="sub-row-title">Product tour</div>
+          <svg class="sub-row-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 6 15 12 9 18"/>
+          </svg>
+        </div>
+        <div class="sub-row" role="button" tabindex="0">
+          <div class="sub-row-title">How to use the app</div>
+        </div>
+        <div class="sub-row" role="button" tabindex="0">
+          <div class="sub-row-title">Privacy Policy and Terms &amp; Conditions</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== BIOMETRICS AND SETTINGS SUB-SCREEN ============================== -->
+  <section id="biometrics-screen" class="screen sub-screen sub-screen-grey hidden">
+    <header class="sub-header">
+      <button class="sub-back" id="biometrics-back" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 4 7 12 15 20"/>
+        </svg>
+      </button>
+      <h2 class="sub-title">Biometrics and settings</h2>
+    </header>
+    <div class="sub-body">
+      <div class="sub-card">
+        <div class="sub-row">
+          <div class="sub-row-title">Enable biometrics</div>
+          <div class="toggle-switch" id="toggle-biometrics" role="switch" tabindex="0" aria-checked="true"></div>
+        </div>
+        <div class="sub-row">
+          <div class="sub-row-title">Deactivate cards</div>
+          <div class="toggle-switch" id="toggle-deactivate-cards" role="switch" tabindex="0" aria-checked="false"></div>
+        </div>
+        <div class="sub-row" role="button" tabindex="0" id="deactivate-account-row">
+          <div class="sub-row-title">Deactivate myVicRoads account</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== PASSKEY SETTINGS SUB-SCREEN ============================== -->
+  <section id="passkey-screen" class="screen sub-screen sub-screen-grey hidden">
+    <header class="sub-header">
+      <button class="sub-back" id="passkey-back" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1F2C3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 4 7 12 15 20"/>
+        </svg>
+      </button>
+      <h2 class="sub-title">Passkey settings</h2>
+    </header>
+    <div class="sub-body">
+      <div class="sub-card">
+        <div class="passkey-info-block">
+          <p class="passkey-info-text">Log in without a password using Face ID, Fingerprint, PIN or pattern across different browsers or devices.</p>
+          <a class="passkey-learn-link" href="#" id="passkey-learn">Learn more about passkeys</a>
+        </div>
+        <hr class="passkey-divider" />
+        <div class="passkey-add-wrap">
+          <button class="passkey-add-btn" id="passkey-add">Add a passkey</button>
+        </div>
+        <p class="passkey-empty-text">There is currently no passkey saved for this account.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== FAKE IN-APP BROWSER ==============================
+       Reusable in-app browser shell that mimics iOS SFSafariViewController chrome.
+       Open via openFakeBrowser('<page-id>') in app.js, or by adding
+       data-fake-page="<page-id>" to any element (handled via delegated click). -->
+  <section id="fake-browser" class="screen fake-browser hidden">
+    <div class="fb-top">
+      <div class="fb-top-inner">
+        <button class="fb-close" id="fb-close" type="button">Close</button>
+      </div>
+      <div class="fb-progress"><span class="fb-progress-bar"></span></div>
+    </div>
+    <div class="fb-viewport" id="fb-viewport"></div>
+    <div class="fb-bottom">
+      <button class="fb-btn fb-back-btn" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#B7BEC6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 4 7 12 15 20"/>
+        </svg>
+      </button>
+      <button class="fb-btn fb-forward-btn" aria-label="Forward">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#B7BEC6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 4 17 12 9 20"/>
+        </svg>
+      </button>
+      <button class="fb-btn fb-share-btn" aria-label="Share">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#0A84FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 15V3"/>
+          <polyline points="8 7 12 3 16 7"/>
+          <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>
+        </svg>
+      </button>
+      <button class="fb-btn fb-refresh-btn" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#0A84FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+          <polyline points="21 3 21 8 16 8"/>
+        </svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================== ADMIN OVERLAY ============================== -->
+  <div id="admin-overlay" class="overlay hidden">
+    <div class="admin-card">
+      <div class="admin-header">
+        <h2>Edit licence details</h2>
+        <button class="admin-close" id="admin-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="admin-form" class="admin-form">
+        <label>First name
+          <input type="text" name="firstName" required />
+        </label>
+        <label>Full name (as on licence)
+          <input type="text" name="fullName" required />
+        </label>
+        <label>Licence number
+          <input type="text" name="licenseNumber" required />
+        </label>
+        <label>Date of birth (e.g. 01 Jan 2000)
+          <input type="text" name="dob" required />
+        </label>
+        <label>Address (street)
+          <input type="text" name="address" required />
+        </label>
+        <label>Suburb / state / postcode
+          <input type="text" name="suburb" required />
+        </label>
+        <label>Issue date
+          <input type="text" name="issueDate" required />
+        </label>
+        <label>P1 end date (leave blank if not P1)
+          <input type="text" name="p1EndDate" />
+        </label>
+        <label>Expiry
+          <input type="text" name="expiry" required />
+        </label>
+        <label>Licence type
+          <select name="licenseType">
+            <option value="P1">P1 (Probationary 1)</option>
+            <option value="P2">P2 (Probationary 2)</option>
+            <option value="Full">Full</option>
+            <option value="Learner">Learner</option>
+          </select>
+        </label>
+        <label>Conditions (format: letter | description)
+          <input type="text" name="conditions" placeholder="A | Automatic transmission - (car)" />
+        </label>
+        <label>Vehicle type
+          <input type="text" name="vehicleType" placeholder="Car" />
+        </label>
+        <label>Card number
+          <input type="text" name="cardNumber" placeholder="e.g. P1234567" />
+        </label>
+        <label>Demerit points balance (0&ndash;12)
+          <input type="text" name="demerits" placeholder="0" />
+        </label>
+        <label class="photo-label">Photo
+          <input type="file" name="photo" accept="image/*" id="admin-photo" />
+          <div class="photo-preview" id="admin-photo-preview"></div>
+        </label>
+        <label class="photo-label">Signature
+          <input type="file" name="signature" accept="image/*" id="admin-signature" />
+          <div class="signature-preview" id="admin-signature-preview"></div>
+        </label>
+        <div class="qr-mode-field">
+          <span class="qr-mode-label">QR code mode</span>
+          <div class="qr-mode-toggle" role="radiogroup" aria-label="QR code mode">
+            <input type="radio" id="qr-mode-website" name="qrMode" value="website" checked />
+            <label for="qr-mode-website">Website QR</label>
+            <input type="radio" id="qr-mode-vcard" name="qrMode" value="vcard" />
+            <label for="qr-mode-vcard">IDU QR</label>
+            <input type="radio" id="qr-mode-qld" name="qrMode" value="qld_mdoc" />
+            <label for="qr-mode-qld">QLD mDoc</label>
+          </div>
+          <span class="qr-mode-hint">Website QR works with your phone&rsquo;s default camera app. IDU QR is a contact-card format the IDU app can parse. QLD mDoc is an experimental ISO 18013-5 engagement for IDU&rsquo;s QLD Digital Licence mode.</span>
+        </div>
+        <div class="admin-buttons">
+          <button type="button" class="btn-secondary" id="admin-reset">Reset to default</button>
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================== QR FULLSCREEN ============================== -->
+  <div id="qr-modal" class="qr-fullscreen hidden">
+    <header class="qr-header">
+      <h2 class="qr-title">Verify Licence</h2>
+      <button class="qr-close-btn" id="qr-close">Close</button>
+    </header>
+    <div class="qr-body">
+      <div class="qr-image-wrap" id="qr-image-wrap">
+        <img class="qr-img" src="logos/qr-code.svg" alt="Licence QR code" />
+        <div class="qr-overlay" aria-hidden="true">
+          <svg class="qr-overlay-spinner" viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="20" fill="none" stroke="#FFFFFF" stroke-width="5"
+                    stroke-linecap="round" stroke-dasharray="94 32"></circle>
+          </svg>
+          <svg class="qr-overlay-refresh" viewBox="0 0 24 24" fill="#FFFFFF">
+            <!-- Material Design "refresh" icon. Replaces the previous
+                 Feather refresh-cw (which rendered an angular L-shaped
+                 tail above the arc). This one is a clean filled
+                 clockwise arrow with a triangular head — matches the
+                 reference design and reads instantly as "tap to retry". -->
+            <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="qr-refresh-label" id="qr-refresh-label">Tap to refresh</div>
+      <div class="qr-expires-row">
+        <span class="qr-expires-label">QR expires</span>
+        <span class="qr-expires-time" id="qr-timer">02:00</span>
+      </div>
+      <p class="qr-disclaimer">By presenting this QR code you <strong>consent</strong> to share some or all of your driver licence information, including with scanners, venues and law enforcement agencies. They may retain your information in accordance with their business practices and legal requirements.</p>
+      <h3 class="sharing-heading">You&rsquo;re sharing:</h3>
+      <ul class="sharing-list">
+        <li>Victorian driver licence photo</li>
+        <li>Full name, birth date and address</li>
+        <li>Licence number, type and expiry date</li>
+        <li>Licence status</li>
+        <li>Proficiency</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============================== BARCODE FULLSCREEN ============================== -->
+  <div id="barcode-modal" class="barcode-fullscreen hidden">
+    <header class="barcode-fs-header">
+      <h2 class="barcode-fs-title">Verify Barcode</h2>
+      <button class="barcode-fs-close" id="barcode-close">Close</button>
+    </header>
+    <div class="barcode-fs-body">
+      <h1 class="barcode-fs-heading">Victoria Police barcode</h1>
+      <div class="barcode-fs-image-wrap">
+        <svg id="vp-barcode-big"></svg>
+      </div>
+      <p class="barcode-fs-disclaimer">The person who scans this code will only validate your licence number. No other data will be shared. Please see our <a href="#" class="barcode-privacy-link" id="barcode-privacy-link">privacy policy</a> for more information.</p>
+    </div>
+  </div>
+
+  <script src="lib/JsBarcode.code128.min.js"></script>
+  <script src="lib/qrcode.min.js"></script>
+  <script src="lib/pako_deflate.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="app.js"></script>
+  <script src="prototype-pin.js"></script>
+  <script src="keys.js"></script>
+  <script src="prototype-google.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then((reg) => {
+          // Force an update check on every page load. Without this, older
+          // Android PWAs (Samsung Internet on Galaxy S8/S9/etc.) can sit on
+          // a cached SW for days before checking for a new one — customers
+          // keep getting stale styles.css / app.js even after we ship fixes.
+          try { reg.update(); } catch (_) {}
+          // Poll every 30 min in case the app is left open across a deploy.
+          setInterval(() => { try { reg.update(); } catch (_) {} }, 30 * 60 * 1000);
+        }).catch(err => console.warn('SW reg failed', err));
+
+        // When a new SW takes control (activate + clients.claim), auto-reload
+        // once so the freshly cached assets are actually rendered. Guarded
+        // against reload loops with a session flag.
+        let didReload = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (didReload) return;
+          didReload = true;
+          window.location.reload();
+        });
+      });
+    }
+  </script>
+</body>
+</html>
